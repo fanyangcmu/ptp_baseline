@@ -42,36 +42,45 @@ class CcVae(PyTorchModule):
         else:
             self.decoder_output_layer_channels = data_channels
         self.data_channels = data_channels
-
         self._encoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=self.data_channels * 2,
-                out_channels=hidden_dim // 2,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                bias=False,
-            ),
+            nn.Linear(self.data_channels*2, hidden_dim*2),
             nn.ReLU(True),
+            nn.Linear(hidden_dim*2, hidden_dim),
+            nn.ReLU(True),
+            nn.Linear(hidden_dim, z_fc_dim, bias=False),
+            nn.ReLU(True)
 
-            nn.Conv2d(
-                in_channels=hidden_dim // 2,
-                out_channels=hidden_dim,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                bias=False,
-            ),
-            nn.ReLU(True),
-
-            network_utils.Flatten(),
-            nn.Linear(
-                hidden_dim * embedding_root_len * embedding_root_len,
-                z_fc_dim,
-                bias=False,
-            ),
-            nn.ReLU(True),
         )
+
+        # self._encoder = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels=self.data_channels * 2,
+        #         out_channels=hidden_dim // 2,
+        #         kernel_size=3,
+        #         stride=2,
+        #         padding=1,
+        #         bias=False,
+        #     ),
+        #     nn.ReLU(True),
+
+        #     nn.Conv2d(
+        #         in_channels=hidden_dim // 2,
+        #         out_channels=hidden_dim,
+        #         kernel_size=3,
+        #         stride=2,
+        #         padding=1,
+        #         bias=False,
+        #     ),
+        #     nn.ReLU(True),
+
+        #     network_utils.Flatten(),
+        #     nn.Linear(
+        #         hidden_dim * embedding_root_len * embedding_root_len,
+        #         z_fc_dim,
+        #         bias=False,
+        #     ),
+        #     nn.ReLU(True),
+        # )
 
         self._mu_layer = nn.Sequential(
             nn.Linear(z_fc_dim, z_dim),
@@ -105,15 +114,27 @@ class CcVae(PyTorchModule):
             submodule=unet_block,
             outermost=True)
 
-        self._decoder = unet_block
+        self._decoder = nn.Sequential(
+            nn.Linear(z_fc_dim + self.data_channels, hidden_dim),
+            nn.ReLU(True),
+            nn.Linear(hidden_dim, self.data_channels)
+        )
 
-        self._output_layer = [
-            nn.Conv2d(
-                in_channels=hidden_dim,
-                out_channels=self.decoder_output_layer_channels,
-                kernel_size=1,
-                stride=1)
-        ]
+        # self._decoder = unet_block
+
+        self._output_layer = nn.Sequential(
+            nn.Linear(self.data_channels, self.data_channels),
+            nn.ReLU(),
+            nn.Linear(self.data_channels, self.data_channels)
+        )
+
+        # self._output_layer = [
+        #     nn.Conv2d(
+        #         in_channels=hidden_dim,
+        #         out_channels=self.decoder_output_layer_channels,
+        #         kernel_size=1,
+        #         stride=1)
+        # ]
 
         if use_normalization:
             self._output_layer += [nn.Tanh()]
@@ -122,14 +143,13 @@ class CcVae(PyTorchModule):
         self._output_scaling_factor = output_scaling_factor
 
     def encode(self, data, cond):
-        assert data.shape[-1] == self.data_root_len
-        assert data.shape[-2] == self.data_root_len
-        assert cond.shape[-1] == self.data_root_len
-        assert cond.shape[-2] == self.data_root_len
+        # assert data.shape[-1] == self.data_root_len
+        # assert data.shape[-2] == self.data_root_len
+        # assert cond.shape[-1] == self.data_root_len
+        # assert cond.shape[-2] == self.data_root_len
 
         img_diff = cond - data
-        encoder_input = torch.cat((img_diff, cond), dim=1)
-
+        encoder_input = torch.cat((img_diff, cond), dim=1).float()
         feat = self._encoder(encoder_input)
         mu = self._mu_layer(feat)
         logvar = self._logvar_layer(feat)
@@ -137,21 +157,21 @@ class CcVae(PyTorchModule):
         return mu, logvar
 
     def decode(self, z, cond):
-        cond = cond.view(
-            -1,
-            self.data_channels,
-            self.data_root_len,
-            self.data_root_len,
-        )
+        # cond = cond.view(
+        #     -1,
+        #     self.data_channels,
+        #     self.data_root_len,
+        #     self.data_root_len,
+        # )
 
         z_feat = self._z_encoder(z)
-
-        state = self._decoder.forward(cond, cond=z_feat)
+        decoder_input = torch.cat((z_feat, cond), dim=-1).float()
+        # state = self._decoder.forward(cond, cond=z_feat)
+        state = self._decoder.forward(decoder_input)
         recon = self._output_layer(state)
 
         if self._output_scaling_factor is not None:
             recon = recon * self._output_scaling_factor
-
         return recon
 
     def forward(self, data, cond):
@@ -416,7 +436,7 @@ class HierarchicalCcVae(PyTorchModule):
                 rl_model_dict = load_local_or_remote_file(path)
                 network = rl_model_dict['trainer/affordance'].to(ptu.device)
                 self._networks.append(network)
-
+        
         try:
             self.data_root_len = self._networks[0].data_root_len
             for network in self._networks:

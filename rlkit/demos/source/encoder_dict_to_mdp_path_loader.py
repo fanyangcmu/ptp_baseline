@@ -7,7 +7,7 @@ from rlkit.demos.source.dict_to_mdp_path_loader import DictToMDPPathLoader
 from rlkit.util.io import load_local_or_remote_file
 from rlkit.data_management.path_builder import PathBuilder
 
-from roboverse.bullet.misc import quat_to_deg
+# from roboverse.bullet.misc import quat_to_deg
 
 
 class EncoderDictToMDPPathLoader(DictToMDPPathLoader):

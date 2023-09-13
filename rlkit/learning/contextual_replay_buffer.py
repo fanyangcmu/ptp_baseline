@@ -25,7 +25,7 @@ class ContextualRelabelingReplayBuffer(ContextualRelabelingReplayBuffer):
     def __init__(
             self,
             max_size,
-            env,
+            # env,
             context_keys,
             observation_keys_to_save,
             sample_context_from_obs_dict_fn,
@@ -58,7 +58,7 @@ class ContextualRelabelingReplayBuffer(ContextualRelabelingReplayBuffer):
     ):
         super().__init__(
             max_size=max_size,
-            env=env,
+            # env=env,
             context_keys=context_keys,
             observation_keys_to_save=observation_keys_to_save,
             sample_context_from_obs_dict_fn=sample_context_from_obs_dict_fn,

@@ -2,7 +2,7 @@ import warnings
 from typing import Any, Callable, Dict, List
 import numpy as np
 import gym
-from multiworld.core.multitask_env import MultitaskEnv
+# from multiworld.core.multitask_env import MultitaskEnv
 from rlkit.util.io import load_local_or_remote_file
 from rlkit import pythonplusplus as ppp
 from rlkit.core.distribution import DictDistribution
@@ -23,7 +23,7 @@ GoalConditionedDiagnosticsFn = Callable[
 class GoalDictDistributionFromMultitaskEnv(DictDistribution):
     def __init__(
             self,
-            env: MultitaskEnv,
+            env,
             desired_goal_keys=('desired_goal',),
     ):
         self._env = env
@@ -48,7 +48,7 @@ class GoalDictDistributionFromMultitaskEnv(DictDistribution):
 class AddImageDistribution(DictDistribution):
     def __init__(
             self,
-            env: MultitaskEnv,
+            env,
             base_distribution: DictDistribution,
             renderer: EnvRenderer,
             image_goal_key='image_desired_goal',
@@ -153,7 +153,7 @@ class PresampledPathDistribution(DictDistribution):
 class AddManualImageDistribution(DictDistribution):
     def __init__(
             self,
-            env: MultitaskEnv,
+            env,
             base_distribution: DictDistribution,
             renderer: EnvRenderer,
             image_goal_key='image_desired_goal',
@@ -376,7 +376,7 @@ class MultipleGoalsNotDonePresampledPathDistribution(
 class ContextualRewardFnFromMultitaskEnv(ContextualRewardFn):
     def __init__(
             self,
-            env: MultitaskEnv,
+            env,
             achieved_goal_from_observation: Callable[[Observation], Goal],
             desired_goal_key='desired_goal',
             achieved_goal_key='achieved_goal',

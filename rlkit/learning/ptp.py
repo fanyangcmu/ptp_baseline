@@ -33,32 +33,32 @@ from rlkit.envs.contextual.latent_distributions import (
     PresamplePriorDistribution,
 )
 from rlkit.envs.encoder_wrappers import EncoderWrappedEnv
-from rlkit.envs.gripper_state_wrapper import GripperStateWrappedEnv
-from rlkit.envs.gripper_state_wrapper import process_gripper_state
-from rlkit.envs.images import EnvRenderer
-from rlkit.envs.images import InsertImageEnv
-from rlkit.demos.source.mdp_path_loader import MDPPathLoader  
+# from rlkit.envs.gripper_state_wrapper import GripperStateWrappedEnv
+# from rlkit.envs.gripper_state_wrapper import process_gripper_state
+# from rlkit.envs.images import EnvRenderer
+# from rlkit.envs.images import InsertImageEnv
+# from rlkit.demos.source.mdp_path_loader import MDPPathLoader  
 from rlkit.demos.source.encoder_dict_to_mdp_path_loader import EncoderDictToMDPPathLoader  
 from rlkit.torch.networks import ConcatMlp, Mlp
 from rlkit.torch.networks.cnn import ConcatCNN
 from rlkit.torch.networks.cnn import ConcatTwoChannelCNN
 from rlkit.torch.sac.policies import GaussianPolicy
-from rlkit.torch.sac.policies import MakeDeterministic  
+# from rlkit.torch.sac.policies import MakeDeterministic  
 from rlkit.torch.sac.iql_trainer import IQLTrainer
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from rlkit.launchers.contextual.rig.rig_launcher import StateImageGoalDiagnosticsFn  
-from rlkit.launchers.contextual.util import get_gym_env
-from rlkit.launchers.rl_exp_launcher_util import create_exploration_policy
+# from rlkit.launchers.contextual.util import get_gym_env
+# from rlkit.launchers.rl_exp_launcher_util import create_exploration_policy
 from rlkit.util.io import load_local_or_remote_file
-from rlkit.visualization.video import RIGVideoSaveFunction
+# from rlkit.visualization.video import RIGVideoSaveFunction
 from rlkit.visualization.video import save_paths as save_paths_fn
 from rlkit.samplers.data_collector.contextual_path_collector import ContextualPathCollector  
 from rlkit.samplers.rollout_functions import contextual_rollout
 
-from rlkit.envs.contextual_env import ContextualEnv
-from rlkit.envs.contextual_env import SubgoalContextualEnv  
-from rlkit.envs.contextual_env import NonEpisodicSubgoalContextualEnv  
+# from rlkit.envs.contextual_env import ContextualEnv
+# from rlkit.envs.contextual_env import SubgoalContextualEnv  
+# from rlkit.envs.contextual_env import NonEpisodicSubgoalContextualEnv  
 from rlkit.learning.contextual_replay_buffer import ContextualRelabelingReplayBuffer  
 from rlkit.planning.random_planner import RandomPlanner  
 from rlkit.planning.mppi_planner import MppiPlanner  
@@ -82,7 +82,7 @@ PLANNER_CTORS = {
 
 class RewardFn:
     def __init__(self,
-                 env,
+                #  env,
                  obs_type='latent',
                  reward_type='dense',
                  epsilon=1.0,
@@ -97,7 +97,7 @@ class RewardFn:
             self.obs_key = 'state_observation'
             self.goal_key = 'state_desired_goal'
 
-        self.env = env
+        # self.env = env
         self.reward_type = reward_type
         self.epsilon = epsilon
 
@@ -130,9 +130,9 @@ class RewardFn:
             sd_t = np.square(np.linalg.norm(s - c, axis=1))
             reward = sd_tm1 - sd_t
 
-        elif self.reward_type == 'highlevel':
-            reward = self.env.compute_reward(
-                states, actions, next_states, contexts)
+        # elif self.reward_type == 'highlevel':
+        #     reward = self.env.compute_reward(
+        #         states, actions, next_states, contexts)
 
         elif self.reward_type == 'classifier':
             s = ptu.from_numpy(s)
@@ -185,26 +185,26 @@ def process_args(variant):
             variant['path_loader_kwargs']['demo_paths'] = [demo_paths[0]]
 
 
-def add_gripper_state_obs(
-    rollout
-):
-    def wrapper(*args, **kwargs):
-        paths = rollout(*args, **kwargs)
-        for i in range(paths['observations'].shape[0]):
-            d = paths['observations'][i]
-            d['gripper_state_observation'] = process_gripper_state(
-                d['state_observation'])
-            d['gripper_state_desired_goal'] = process_gripper_state(
-                d['state_desired_goal'])
+# def add_gripper_state_obs(
+#     rollout
+# ):
+#     def wrapper(*args, **kwargs):
+#         paths = rollout(*args, **kwargs)
+#         for i in range(paths['observations'].shape[0]):
+#             d = paths['observations'][i]
+#             d['gripper_state_observation'] = process_gripper_state(
+#                 d['state_observation'])
+#             d['gripper_state_desired_goal'] = process_gripper_state(
+#                 d['state_desired_goal'])
 
-        for i in range(paths['next_observations'].shape[0]):
-            d = paths['next_observations'][i]
-            d['gripper_state_observation'] = process_gripper_state(
-                d['state_observation'])
-            d['gripper_state_desired_goal'] = process_gripper_state(
-                d['state_desired_goal'])
-        return paths
-    return wrapper
+#         for i in range(paths['next_observations'].shape[0]):
+#             d = paths['next_observations'][i]
+#             d['gripper_state_observation'] = process_gripper_state(
+#                 d['state_observation'])
+#             d['gripper_state_desired_goal'] = process_gripper_state(
+#                 d['state_desired_goal'])
+#         return paths
+#     return wrapper
 
 
 def ptp_experiment(  
@@ -330,7 +330,7 @@ def ptp_experiment(
 
     # Enviorment Wrapping
     logging.info('Creating the environment...')
-    renderer = EnvRenderer(init_camera=init_camera, **renderer_kwargs)
+    # renderer = EnvRenderer(init_camera=init_camera, **renderer_kwargs)
 
     if goal_key_reward_fn is not None:
         distrib_goal_key = goal_key_reward_fn
@@ -355,38 +355,42 @@ def ptp_experiment(
         contextual_env_kwargs,
         reset_interval=0,
     ):
-        vqvae = model['vqvae']
-        state_env = get_gym_env(
-            env_id,
-            env_class=env_class,
-            env_kwargs=env_kwargs,
-        )
-        state_env = ClipAction(state_env)
-        renderer = EnvRenderer(
-            init_camera=init_camera,
-            **renderer_kwargs)
-        img_env = InsertImageEnv(
-            state_env,
-            renderer=renderer)
-        encoded_env = encoder_wrapper(
-            img_env,
-            vqvae,
-            step_keys_map=dict(image_observation='latent_observation'),
-            reset_keys_map=reset_keys_map,
-        )
-        if use_gripper_observation:
-            encoded_env = GripperStateWrappedEnv(
-                encoded_env,
-                state_observation_key,
-                step_keys_map=dict(
-                    gripper_state_observation='gripper_state_observation')
-            )
-
+        # vqvae = model['vqvae']
+        # state_env = get_gym_env(
+        #     env_id,
+        #     env_class=env_class,
+        #     env_kwargs=env_kwargs,
+        # )
+        # state_env = ClipAction(state_env)
+        # renderer = EnvRenderer(
+        #     init_camera=init_camera,
+        #     **renderer_kwargs)
+        # img_env = InsertImageEnv(
+        #     state_env,
+        #     renderer=renderer)
+        # encoded_env = encoder_wrapper(
+        #     img_env,
+        #     vqvae,
+        #     step_keys_map=dict(image_observation='latent_observation'),
+        #     reset_keys_map=reset_keys_map,
+        # )
+        # if use_gripper_observation:
+        #     encoded_env = GripperStateWrappedEnv(
+        #         encoded_env,
+        #         state_observation_key,
+        #         step_keys_map=dict(
+        #             gripper_state_observation='gripper_state_observation')
+        #     )
         if goal_sampling_mode == 'vae_prior':
+            # latent_goal_distribution = PriorDistribution(
+            #     vqvae.representation_size,
+            #     goal_key,
+            # )
             latent_goal_distribution = PriorDistribution(
-                vqvae.representation_size,
+                33,
                 goal_key,
             )
+
             diagnostics = StateImageGoalDiagnosticsFn({}, )
 
         elif goal_sampling_mode == 'amortized_vae_prior':
@@ -419,13 +423,17 @@ def ptp_experiment(
             diagnostics = StateImageGoalDiagnosticsFn({}, )
 
         elif goal_sampling_mode == 'presampled_images':
-            diagnostics = state_env.get_contextual_diagnostics
+            # diagnostics = state_env.get_contextual_diagnostics
+            diagnostics = StateImageGoalDiagnosticsFn({}, )
 
+            # image_goal_distribution = PresampledPathDistribution(
+            #     presampled_goals_path,
+            #     vqvae.representation_size,
+            # )
             image_goal_distribution = PresampledPathDistribution(
                 presampled_goals_path,
-                vqvae.representation_size,
+                33,
             )
-
             # Representation Check
             add_distrib = AddLatentDistribution
 
@@ -434,83 +442,83 @@ def ptp_experiment(
                 image_goal_distribution,
                 input_key=image_goal_key,
                 output_key=distrib_goal_key,
-                model=vqvae,
+                # model=vqvae,
             )
 
-        elif goal_sampling_mode == 'multiple_goals_not_done_presampled_images':
-            diagnostics = state_env.get_contextual_diagnostics
-            image_goal_distribution = MultipleGoalsNotDonePresampledPathDistribution(  
-                presampled_goals_path,
-                vqvae.representation_size,
-                encoded_env,
-                multiple_goals_eval_seeds,
-            )
-
-            # Representation Check
-            add_distrib = AddLatentDistribution
-
-            # AddLatentDistribution
-            latent_goal_distribution = add_distrib(
-                image_goal_distribution,
-                image_goal_key,
-                distrib_goal_key,
-                vqvae,
-            )
-        elif goal_sampling_mode == 'presample_latents':
-            diagnostics = StateImageGoalDiagnosticsFn({}, )
-            # diagnostics = state_env.get_contextual_diagnostics
-            latent_goal_distribution = PresamplePriorDistribution(
-                model,
-                distrib_goal_key,
-                state_env,
-                num_presample=num_presample,
-                affordance_type='cc_vae',
-            )
-            if use_image:
-                latent_goal_distribution = AddDecodedImageDistribution(
-                    latent_goal_distribution,
-                    distrib_goal_key,
-                    image_goal_key,
-                    vqvae,
-                )
-        elif goal_sampling_mode == 'presampled_latents':
-            diagnostics = state_env.get_contextual_diagnostics
-            latent_goal_distribution = PresampledPriorDistribution(
-                presampled_goals_path,
-                distrib_goal_key,
-            )
-        elif goal_sampling_mode == 'reset_of_env':
-            state_goal_env = get_gym_env(
-                env_id, env_class=env_class, env_kwargs=env_kwargs)
-            state_goal_distribution = GoalDictDistributionFromMultitaskEnv(
-                state_goal_env,
-                goal_keys=[state_goal_key],
-            )
-            image_goal_distribution = AddImageDistribution(
-                env=state_env,
-                base_distribution=state_goal_distribution,
-                image_goal_key=image_goal_key,
-                renderer=renderer,
-            )
-            latent_goal_distribution = AddLatentDistribution(
-                image_goal_distribution,
-                image_goal_key,
-                distrib_goal_key,
-                vqvae,
-            )
-            diagnostics = state_goal_env.get_contextual_diagnostics
-        else:
-            raise ValueError
-
-        # if use_gripper_observation:
-        #     latent_goal_distribution = AddGripperStateDistribution(
-        #         latent_goal_distribution,
-        #         state_goal_key,
-        #         GRIPPER_GOAL_Key,
+        # elif goal_sampling_mode == 'multiple_goals_not_done_presampled_images':
+        #     diagnostics = state_env.get_contextual_diagnostics
+        #     image_goal_distribution = MultipleGoalsNotDonePresampledPathDistribution(  
+        #         presampled_goals_path,
+        #         vqvae.representation_size,
+        #         encoded_env,
+        #         multiple_goals_eval_seeds,
         #     )
 
+        #     # Representation Check
+        #     add_distrib = AddLatentDistribution
+
+        #     # AddLatentDistribution
+        #     latent_goal_distribution = add_distrib(
+        #         image_goal_distribution,
+        #         image_goal_key,
+        #         distrib_goal_key,
+        #         vqvae,
+        #     )
+        # elif goal_sampling_mode == 'presample_latents':
+        #     diagnostics = StateImageGoalDiagnosticsFn({}, )
+        #     # diagnostics = state_env.get_contextual_diagnostics
+        #     latent_goal_distribution = PresamplePriorDistribution(
+        #         model,
+        #         distrib_goal_key,
+        #         state_env,
+        #         num_presample=num_presample,
+        #         affordance_type='cc_vae',
+        #     )
+        #     if use_image:
+        #         latent_goal_distribution = AddDecodedImageDistribution(
+        #             latent_goal_distribution,
+        #             distrib_goal_key,
+        #             image_goal_key,
+        #             vqvae,
+        #         )
+        # elif goal_sampling_mode == 'presampled_latents':
+        #     diagnostics = state_env.get_contextual_diagnostics
+        #     latent_goal_distribution = PresampledPriorDistribution(
+        #         presampled_goals_path,
+        #         distrib_goal_key,
+        #     )
+        # elif goal_sampling_mode == 'reset_of_env':
+        #     state_goal_env = get_gym_env(
+        #         env_id, env_class=env_class, env_kwargs=env_kwargs)
+        #     state_goal_distribution = GoalDictDistributionFromMultitaskEnv(
+        #         state_goal_env,
+        #         goal_keys=[state_goal_key],
+        #     )
+        #     image_goal_distribution = AddImageDistribution(
+        #         env=state_env,
+        #         base_distribution=state_goal_distribution,
+        #         image_goal_key=image_goal_key,
+        #         renderer=renderer,
+        #     )
+        #     latent_goal_distribution = AddLatentDistribution(
+        #         image_goal_distribution,
+        #         image_goal_key,
+        #         distrib_goal_key,
+        #         vqvae,
+        #     )
+        #     diagnostics = state_goal_env.get_contextual_diagnostics
+        # else:
+        #     raise ValueError
+
+        # # if use_gripper_observation:
+        # #     latent_goal_distribution = AddGripperStateDistribution(
+        # #         latent_goal_distribution,
+        # #         state_goal_key,
+        # #         GRIPPER_GOAL_Key,
+        # #     )
+
         reward_fn = RewardFn(
-            state_env,
+            # state_env,
             **reward_kwargs
         )
 
@@ -581,54 +589,41 @@ def ptp_experiment(
                 planner_ctor = PLANNER_CTORS[planner_type]
                 planner = planner_ctor(model, debug=False, **planner_kwargs)
 
-            if reset_interval <= 0:
-                env = SubgoalContextualEnv(
-                    encoded_env,
-                    context_distribution=latent_goal_distribution,
-                    reward_fn=reward_fn,
+            # if reset_interval <= 0:
+            #     env = SubgoalContextualEnv(
+            #         encoded_env,
+            #         context_distribution=latent_goal_distribution,
+            #         reward_fn=reward_fn,
 
-                    observation_key=observation_key,
-                    goal_key=goal_key,
-                    use_encoding=False,
+            #         observation_key=observation_key,
+            #         goal_key=goal_key,
+            #         use_encoding=False,
 
-                    contextual_diagnostics_fns=contextual_diagnostics_fns,
-                    planner=planner,
-                    **contextual_env_kwargs,
-                )
-            else:
-                raise NotImplementedError  # Adapt from ptp_vib
-                env = NonEpisodicSubgoalContextualEnv(
-                    encoded_env,
-                    context_distribution=latent_goal_distribution,
-                    reward_fn=reward_fn,
-                    observation_key=observation_key,
-                    contextual_diagnostics_fns=contextual_diagnostics_fns,
-                    # Planning.
-                    planner=planner,
-                    # Reset-free.
-                    reset_interval=reset_interval,
-                    # Others.
-                    **contextual_env_kwargs,
-                )
+            #         contextual_diagnostics_fns=contextual_diagnostics_fns,
+            #         planner=planner,
+            #         **contextual_env_kwargs,
+            #     )
+            # else:
+            #     raise NotImplementedError  # Adapt from ptp_vib
+        # else:
+        #     env = ContextualEnv(
+        #         encoded_env,
+        #         context_distribution=latent_goal_distribution,
+        #         reward_fn=reward_fn,
+        #         observation_key=observation_key,
+        #         contextual_diagnostics_fns=[diagnostics] if not isinstance(
+        #             diagnostics, list) else diagnostics,
+        #     )
 
-        else:
-            env = ContextualEnv(
-                encoded_env,
-                context_distribution=latent_goal_distribution,
-                reward_fn=reward_fn,
-                observation_key=observation_key,
-                contextual_diagnostics_fns=[diagnostics] if not isinstance(
-                    diagnostics, list) else diagnostics,
-            )
+        # return env, latent_goal_distribution, reward_fn
+        return latent_goal_distribution, reward_fn
 
-        return env, latent_goal_distribution, reward_fn
-
-    model = io_util.load_model(pretrained_vae_path)
-    path_loader_kwargs['model'] = model  # ['vqvae']
+    # model = io_util.load_model(pretrained_vae_path)
+    # path_loader_kwargs['model'] = model  # ['vqvae']
 
     # Environment Definitions
-    expl_env_kwargs = env_kwargs.copy()
-    expl_env_kwargs['expl'] = True
+    # expl_env_kwargs = env_kwargs.copy()
+    # expl_env_kwargs['expl'] = True
 
     exploration_goal_sampling_mode = evaluation_goal_sampling_mode
     presampled_goal_kwargs['expl_goals'] = (
@@ -646,25 +641,25 @@ def ptp_experiment(
                  presampled_goal_kwargs['expl_goals_kwargs'],
                  )
     logging.info('num_presample: %d', num_presample)
-    expl_env, expl_context_distrib, expl_reward = (
-        contextual_env_distrib_and_reward(
-            env_id,
-            env_class,
-            env_kwargs,
-            encoder_wrapper,
-            exploration_goal_sampling_mode,
-            presampled_goal_kwargs['expl_goals'],
-            num_presample,
-            reward_kwargs=reward_kwargs,
-            presampled_goals_kwargs=(
-                presampled_goal_kwargs['expl_goals_kwargs']),
-            use_planner=use_expl_planner,
-            planner_type=expl_planner_type,
-            planner_kwargs=expl_planner_kwargs,
-            planner_scripted_goals=expl_planner_scripted_goals,
-            contextual_env_kwargs=expl_contextual_env_kwargs,
-            reset_interval=expl_reset_interval,
-        ))
+    # expl_env, expl_context_distrib, expl_reward = (
+    #     contextual_env_distrib_and_reward(
+    #         env_id,
+    #         env_class,
+    #         env_kwargs,
+    #         encoder_wrapper,
+    #         exploration_goal_sampling_mode,
+    #         presampled_goal_kwargs['expl_goals'],
+    #         num_presample,
+    #         reward_kwargs=reward_kwargs,
+    #         presampled_goals_kwargs=(
+    #             presampled_goal_kwargs['expl_goals_kwargs']),
+    #         use_planner=use_expl_planner,
+    #         planner_type=expl_planner_type,
+    #         planner_kwargs=expl_planner_kwargs,
+    #         planner_scripted_goals=expl_planner_scripted_goals,
+    #         contextual_env_kwargs=expl_contextual_env_kwargs,
+    #         reset_interval=expl_reset_interval,
+    #     ))
 
     logging.info('Preparing the [evaluation] env and contextual distrib...')
     logging.info('Preparing the eval env and contextual distrib...')
@@ -675,24 +670,24 @@ def ptp_experiment(
                  presampled_goal_kwargs['eval_goals_kwargs'],
                  )
     logging.info('num_presample: %d', num_presample)
-    eval_env, eval_context_distrib, eval_reward = (
-        contextual_env_distrib_and_reward(
-            env_id,
-            env_class,
-            env_kwargs,
-            encoder_wrapper,
-            evaluation_goal_sampling_mode,
-            presampled_goal_kwargs['eval_goals'],
-            num_presample,
-            reward_kwargs=reward_kwargs,
-            presampled_goals_kwargs=(
-                presampled_goal_kwargs['eval_goals_kwargs']),
-            use_planner=use_eval_planner,
-            planner_type=eval_planner_type,
-            planner_kwargs=eval_planner_kwargs,
-            planner_scripted_goals=eval_planner_scripted_goals,
-            contextual_env_kwargs=eval_contextual_env_kwargs,
-        ))
+    # eval_env, eval_context_distrib, eval_reward = (
+    #     contextual_env_distrib_and_reward(
+    #         env_id,
+    #         env_class,
+    #         env_kwargs,
+    #         encoder_wrapper,
+    #         evaluation_goal_sampling_mode,
+    #         presampled_goal_kwargs['eval_goals'],
+    #         num_presample,
+    #         reward_kwargs=reward_kwargs,
+    #         presampled_goals_kwargs=(
+    #             presampled_goal_kwargs['eval_goals_kwargs']),
+    #         use_planner=use_eval_planner,
+    #         planner_type=eval_planner_type,
+    #         planner_kwargs=eval_planner_kwargs,
+    #         planner_scripted_goals=eval_planner_scripted_goals,
+    #         contextual_env_kwargs=eval_contextual_env_kwargs,
+    #     ))
 
     compare_reward_kwargs = reward_kwargs.copy()
     compare_reward_kwargs['reward_type'] = 'sparse'
@@ -704,7 +699,8 @@ def ptp_experiment(
                  presampled_goal_kwargs['training_goals_kwargs'],
                  )
     logging.info('num_presample: %d', num_presample)
-    _, training_context_distrib, compare_reward = (
+    # _, training_context_distrib, compare_reward = (
+    training_context_distrib, compare_reward = (
         contextual_env_distrib_and_reward(
             env_id,
             env_class,
@@ -725,7 +721,7 @@ def ptp_experiment(
 
     logging.info('Preparing the IQL code...')
 
-    path_loader_kwargs['env'] = eval_env
+    # path_loader_kwargs['env'] = eval_env
 
     # IQL Code
     if add_env_demos:
@@ -735,14 +731,14 @@ def ptp_experiment(
 
     # Key Setting
     context_key = goal_key
-    obs_dim = (
-        expl_env.observation_space.spaces[observation_key].low.size
-        + expl_env.observation_space.spaces[context_key].low.size
-    )
+    obs_dim = 33
+    # obs_dim = (
+    #     expl_env.observation_space.spaces[observation_key].low.size
+    #     + expl_env.observation_space.spaces[context_key].low.size
+    # )
     if use_gripper_observation:
-        # obs_dim += 7 * 2
         obs_dim += 7
-    action_dim = expl_env.action_space.low.size
+    action_dim = 3
 
     state_rewards = reward_kwargs.get('reward_type', 'dense') == 'highlevel'
 
@@ -828,7 +824,7 @@ def ptp_experiment(
 
     if online_offline_split:
         online_replay_buffer = ContextualRelabelingReplayBuffer(
-            env=eval_env,
+            # env=eval_env,
             context_keys=cont_keys,
             observation_keys_to_save=obs_keys,
             observation_key=(
@@ -837,7 +833,8 @@ def ptp_experiment(
             observation_keys=observation_keys,
             context_distribution=training_context_distrib,
             sample_context_from_obs_dict_fn=mapper,
-            reward_fn=eval_reward,
+            # reward_fn=eval_reward,
+            reward_fn=compare_reward,
             post_process_batch_fn=concat_context_to_obs,
             context_keys_to_save=cont_keys_to_save,
             **online_replay_buffer_kwargs,
@@ -852,7 +849,8 @@ def ptp_experiment(
             observation_keys=observation_keys,
             context_distribution=training_context_distrib,
             sample_context_from_obs_dict_fn=mapper,
-            reward_fn=eval_reward,
+            # reward_fn=eval_reward,
+            reward_fn=compare_reward,
             post_process_batch_fn=concat_context_to_obs,
             context_keys_to_save=cont_keys_to_save,
             **offline_replay_buffer_kwargs
@@ -964,8 +962,8 @@ def ptp_experiment(
         return np.concatenate(combined_obs, axis=0)
 
     rollout = contextual_rollout
-    if use_gripper_observation:
-        rollout = add_gripper_state_obs(rollout)
+    # if use_gripper_observation:
+    #     rollout = add_gripper_state_obs(rollout)
 
     eval_policy = policy
 
@@ -978,18 +976,18 @@ def ptp_experiment(
         rollout=rollout,
     )
 
-    expl_policy = create_exploration_policy(
-        expl_env,
-        policy,
-        **exploration_policy_kwargs)
-    expl_path_collector = ContextualPathCollector(
-        expl_env,
-        expl_policy,
-        observation_keys=path_collector_observation_keys,
-        context_keys_for_policy=path_collector_context_keys_for_policy,
-        obs_processor=obs_processor,
-        rollout=rollout,
-    )
+    # expl_policy = create_exploration_policy(
+    #     expl_env,
+    #     policy,
+    #     **exploration_policy_kwargs)
+    # expl_path_collector = ContextualPathCollector(
+    #     expl_env,
+    #     expl_policy,
+    #     observation_keys=path_collector_observation_keys,
+    #     context_keys_for_policy=path_collector_context_keys_for_policy,
+    #     obs_processor=obs_processor,
+    #     rollout=rollout,
+    # )
 
     if trainer_type == 'iql':
         if trainer_kwargs['use_online_beta']:
@@ -1000,26 +998,25 @@ def ptp_experiment(
             if algo_kwargs['start_epoch'] == 0:
                 trainer_kwargs['quantile'] = trainer_kwargs['quantile_online']
 
-    if use_expl_planner:
-        expl_env.set_vf(vf)
+    # if use_expl_planner:
+    #     expl_env.set_vf(vf)
 
-    if use_eval_planner:
-        eval_env.set_vf(vf)
+    # if use_eval_planner:
+    #     eval_env.set_vf(vf)
 
     model['vf'] = vf
     model['qf1'] = qf1
     model['qf2'] = qf2
 
-    if use_expl_planner and expl_planner_type not in ['scripted']:
-        expl_env.set_model(model)
+    # if use_expl_planner and expl_planner_type not in ['scripted']:
+    #     expl_env.set_model(model)
 
-    if use_eval_planner and eval_planner_type not in ['scripted']:
-        eval_env.set_model(model)
+    # if use_eval_planner and eval_planner_type not in ['scripted']:
+    #     eval_env.set_model(model)
 
     # Algorithm
     if trainer_type == 'iql':
         trainer = IQLTrainer(
-            env=eval_env,
             policy=policy,
             qf1=qf1,
             qf2=qf2,
@@ -1031,7 +1028,6 @@ def ptp_experiment(
 
     elif trainer_type == 'sac':
         trainer = SACTrainer(
-            env=eval_env,
             policy=policy,
             qf1=qf1,
             qf2=qf2,
@@ -1045,9 +1041,9 @@ def ptp_experiment(
 
     algorithm = TorchBatchRLAlgorithm(
         trainer=trainer,
-        exploration_env=expl_env,
-        evaluation_env=eval_env,
-        exploration_data_collector=expl_path_collector,
+        # exploration_env=expl_env,
+        # evaluation_env=eval_env,
+        # exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
         replay_buffer=replay_buffer,
         max_path_length=max_path_length,
@@ -1083,48 +1079,48 @@ def ptp_experiment(
     algorithm.to(ptu.device)
 
     # Video Saving
-    if save_video:
-        assert (num_video_columns * max_path_length <=
-                algo_kwargs['num_expl_steps_per_train_loop'])
+    # if save_video:
+    #     assert (num_video_columns * max_path_length <=
+    #             algo_kwargs['num_expl_steps_per_train_loop'])
 
-        expl_save_video_kwargs['include_final_goal'] = use_expl_planner
-        eval_save_video_kwargs['include_final_goal'] = use_eval_planner
+    #     expl_save_video_kwargs['include_final_goal'] = use_expl_planner
+    #     eval_save_video_kwargs['include_final_goal'] = use_eval_planner
 
-        expl_save_video_kwargs['decode_image_goal_key'] = 'image_decoded_goal'  
-        eval_save_video_kwargs['decode_image_goal_key'] = 'image_decoded_goal'  
+    #     expl_save_video_kwargs['decode_image_goal_key'] = 'image_decoded_goal'  
+    #     eval_save_video_kwargs['decode_image_goal_key'] = 'image_decoded_goal'  
 
-        expl_video_func = RIGVideoSaveFunction(
-            model['vqvae'],
-            expl_path_collector,
-            'train',
-            image_goal_key=image_goal_key,
-            rows=2,
-            columns=num_video_columns,
-            imsize=imsize,
-            image_format=renderer.output_image_format,
-            unnormalize=True,
-            dump_pickle=save_video_pickle,
-            dump_only_init_and_goal=True,
-            **expl_save_video_kwargs
-        )
-        algorithm.post_train_funcs.append(expl_video_func)
+    #     expl_video_func = RIGVideoSaveFunction(
+    #         model['vqvae'],
+    #         expl_path_collector,
+    #         'train',
+    #         image_goal_key=image_goal_key,
+    #         rows=2,
+    #         columns=num_video_columns,
+    #         imsize=imsize,
+    #         image_format=renderer.output_image_format,
+    #         unnormalize=True,
+    #         dump_pickle=save_video_pickle,
+    #         dump_only_init_and_goal=True,
+    #         **expl_save_video_kwargs
+    #     )
+    #     algorithm.post_train_funcs.append(expl_video_func)
 
-        if algo_kwargs['num_eval_steps_per_epoch'] > 0:
-            eval_video_func = RIGVideoSaveFunction(
-                model['vqvae'],
-                eval_path_collector,
-                'eval',
-                image_goal_key=image_goal_key,
-                rows=2,
-                columns=num_video_columns,
-                imsize=imsize,
-                image_format=renderer.output_image_format,
-                unnormalize=True,
-                dump_pickle=save_video_pickle,
-                dump_only_init_and_goal=True,
-                **eval_save_video_kwargs
-            )
-            algorithm.post_train_funcs.append(eval_video_func)
+    #     if algo_kwargs['num_eval_steps_per_epoch'] > 0:
+    #         eval_video_func = RIGVideoSaveFunction(
+    #             model['vqvae'],
+    #             eval_path_collector,
+    #             'eval',
+    #             image_goal_key=image_goal_key,
+    #             rows=2,
+    #             columns=num_video_columns,
+    #             imsize=imsize,
+    #             image_format=renderer.output_image_format,
+    #             unnormalize=True,
+    #             dump_pickle=save_video_pickle,
+    #             dump_only_init_and_goal=True,
+    #             **eval_save_video_kwargs
+    #         )
+    #         algorithm.post_train_funcs.append(eval_video_func)
 
     # IQL CODE
     if save_paths:

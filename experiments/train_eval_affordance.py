@@ -55,7 +55,7 @@ def train_eval(
         num_test_batches_per_epoch=1,
         dump_samples=False,
         # Model parameters.
-        embedding_dim=5,
+        embedding_dim=33,
         z_dim=8,
         # Training parameters.
         affordance_pred_weight=1000.,
@@ -77,19 +77,19 @@ def train_eval(
     if not os.path.exists(root_dir):
         os.makedirs(root_dir)
 
-    if pretrained_vqvae_dir is not None:
-        pretrained_vqvae_path = os.path.join(pretrained_vqvae_dir, 'vqvae.pt')
-        print('Loading the pretrained VQVAE from %s...'
-              % (pretrained_vqvae_path))
-        vqvae = torch.load(pretrained_vqvae_path).to(ptu.device)
-        assert embedding_dim == vqvae.embedding_dim
-        torch.save(vqvae, vqvae_path)
-        use_pretrained_vqvae = True
-    else:
-        vqvae = VqVae(
-            embedding_dim=embedding_dim,
-        ).to(ptu.device)
-        use_pretrained_vqvae = False
+    # if pretrained_vqvae_dir is not None:
+    #     pretrained_vqvae_path = os.path.join(pretrained_vqvae_dir, 'vqvae.pt')
+    #     print('Loading the pretrained VQVAE from %s...'
+    #           % (pretrained_vqvae_path))
+    #     vqvae = torch.load(pretrained_vqvae_path).to(ptu.device)
+    #     assert embedding_dim == vqvae.embedding_dim
+    #     torch.save(vqvae, vqvae_path)
+    #     use_pretrained_vqvae = True
+    # else:
+    #     vqvae = VqVae(
+    #         embedding_dim=embedding_dim,
+    #     ).to(ptu.device)
+    #     use_pretrained_vqvae = False
 
     affordance = affordance_networks.CcVae(
         data_channels=embedding_dim,
@@ -108,7 +108,7 @@ def train_eval(
         dataset_ctor = vae_datasets.VaeAnyStepDataset
     else:
         raise ValueError
-
+    
     datasets = io_util.load_datasets(
         data_dir=data_dir,
         encoding_dir=pretrained_vqvae_dir,
@@ -121,9 +121,9 @@ def train_eval(
     train_dataset = datasets['train']
     test_dataset = datasets['test']
 
-    if pretrained_vqvae_dir is not None and not augment_image:
-        assert train_dataset.encoding is not None
-        assert test_dataset.encoding is not None
+    # if pretrained_vqvae_dir is not None and not augment_image:
+    #     assert train_dataset.encoding is not None
+    #     assert test_dataset.encoding is not None
 
     train_loader, test_loader = io_util.data_loaders(
         train_dataset, test_dataset, batch_size)
@@ -133,10 +133,10 @@ def train_eval(
     trainer_ctor = AffordanceTrainer
 
     trainer = trainer_ctor(
-        vqvae=vqvae,
+        vqvae=None,
         affordance=affordance,
         classifier=classifier,
-        use_pretrained_vqvae=use_pretrained_vqvae,
+        use_pretrained_vqvae=False,
         tf_logger=logger.tensorboard_logger,
         affordance_pred_weight=affordance_pred_weight,
         affordance_beta=affordance_beta,
@@ -161,8 +161,8 @@ def train_eval(
         if should_save:
             logging.info('Saving the model to %s...' % (root_dir))
 
-            if pretrained_vqvae_dir is None:
-                torch.save(vqvae, vqvae_path)
+            # if pretrained_vqvae_dir is None:
+            #     torch.save(vqvae, vqvae_path)
 
             affordance_path = os.path.join(
                 root_dir, 'affordance.pt')
@@ -192,7 +192,7 @@ def main(_):
         torch.manual_seed(FLAGS.seed)
 
     gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
-
+    
     train_eval(FLAGS.root_dir,
                data_dir=FLAGS.data_dir,
                pretrained_vqvae_dir=FLAGS.vqvae,

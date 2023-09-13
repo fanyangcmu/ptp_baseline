@@ -330,13 +330,13 @@ class VqVae(nn.Module):
         return self._decoder(zqs)
 
     def compute_loss(self, inputs):
-        assert inputs.shape[-1] == self.imsize
-        assert inputs.shape[-2] == self.imsize
+        # assert inputs.shape[-1] == self.imsize
+        # assert inputs.shape[-2] == self.imsize
 
-        inputs = inputs.view(-1,
-                             self.input_channels,
-                             self.imsize,
-                             self.imsize)
+        # inputs = inputs.view(-1,
+        #                      self.input_channels,
+        #                      self.imsize,
+        #                      self.imsize)
         dbprint('- compute_loss -')
         dbprint('inputs: ', inputs.shape)
 

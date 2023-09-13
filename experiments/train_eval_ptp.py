@@ -2,7 +2,7 @@ import os
 from absl import app
 from absl import flags
 
-from roboverse.envs.sawyer_drawer_pnp_push import SawyerDrawerPnpPush
+# from roboverse.envs.sawyer_drawer_pnp_push import SawyerDrawerPnpPush
 
 import rlkit.util.hyperparameter as hyp
 from rlkit.demos.source.encoder_dict_to_mdp_path_loader import EncoderDictToMDPPathLoader  # NOQA
@@ -396,10 +396,11 @@ def process_variant(variant, data_path):  # NOQA
         if variant['evaluation_goal_sampling_mode'] == _old_mode:
             variant['evaluation_goal_sampling_mode'] = _new_mode
 
+    variant['training_goal_sampling_mode'] = 'vae_prior'
     ########################################
     # Environments.
     ########################################
-    variant['env_class'] = SawyerDrawerPnpPush
+    # variant['env_class'] = SawyerDrawerPnpPush
     variant['env_kwargs']['downsample'] = True
     variant['env_kwargs']['env_obs_img_dim'] = 196
     variant['env_kwargs']['test_env_command'] = (

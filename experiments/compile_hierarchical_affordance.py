@@ -13,7 +13,7 @@ from rlkit.util.io import load_local_or_remote_file
 flags.DEFINE_string('input', None, '')
 flags.DEFINE_string('output', None, '')
 flags.DEFINE_integer('multiplier', 2, '')
-flags.DEFINE_integer('num_levels', 3, '')
+flags.DEFINE_integer('num_levels', 2, '')
 flags.DEFINE_integer('dt', 15, 'Step size to sample goals.')
 
 FLAGS = flags.FLAGS
@@ -31,7 +31,6 @@ def main(_):
             path_list.append(path)
 
         path_list.reverse()
-
         affordance = affordance_networks.HierarchicalCcVae(
             multiplier=FLAGS.multiplier,
             num_levels=FLAGS.num_levels,
@@ -72,10 +71,10 @@ def main(_):
         torch.save(affordance, output_path)
 
         # Copy the pretrained VQVAE
-        pretrained_vqvae_path = os.path.join(
-            FLAGS.input, 'dt%d' % (FLAGS.dt), 'vqvae.pt')
-        vqvae = torch.load(pretrained_vqvae_path)
-        torch.save(vqvae, os.path.join(output_dir, 'vqvae.pt'))
+        # pretrained_vqvae_path = os.path.join(
+        #     FLAGS.input, 'dt%d' % (FLAGS.dt), 'vqvae.pt')
+        # vqvae = torch.load(pretrained_vqvae_path)
+        # torch.save(vqvae, os.path.join(output_dir, 'vqvae.pt'))
 
     else:
         path = path_list[0]

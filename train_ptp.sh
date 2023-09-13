@@ -1,0 +1,1 @@
+PYTHONPATH=$PYTHONPATH:. python experiments/train_eval_ptp.py --data_dir /home/fanyang/github/ptp_baseline/data/rope --local --gpu --save_pretrained --name exp_task00 --arg_binding eval_seeds=0

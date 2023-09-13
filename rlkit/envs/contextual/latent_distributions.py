@@ -95,7 +95,7 @@ class AddLatentDistribution(DictDistribution):
         self._spaces = dist.spaces
         self.input_key = input_key
         self.output_key = output_key
-        self.model = model
+        # self.model = model
         self.representation_size = self.model.representation_size
         latent_space = Box(
             -10 * np.ones(self.representation_size),

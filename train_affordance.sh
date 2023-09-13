@@ -1,0 +1,3 @@
+# PYTHONPATH=$PYTHONPATH:. python experiments/train_eval_affordance.py --data_dir data/rope/rope_rollout_v6.h5 --gin_param train_eval.z_dim=8 --gin_param train_eval.affordance_pred_weight=1000 --gin_param train_eval.affordance_beta=0.1 --dt 20 --dt_tolerance 5 --max_steps 1 --root_dir data_ckpt --dataset_type multistep
+
+PYTHONPATH=$PYTHONPATH:. python experiments/train_eval_affordance.py --data_dir data/rope/rope_rollout_v6.h5 --gin_param train_eval.z_dim=8 --gin_param train_eval.affordance_pred_weight=1000 --gin_param train_eval.affordance_beta=0.1 --dt 40 --dt_tolerance 10 --max_steps 1 --root_dir data_ckpt/dt40 --dataset_type multistep

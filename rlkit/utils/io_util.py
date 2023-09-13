@@ -27,27 +27,30 @@ def load_datasets(data_dir,
 
     datasets = {}
     for key in keys:
-        if is_val_format:
-            if key == 'train':
-                data_path = os.path.join(data_dir, 'combined_images.npy')
-            elif key == 'test':
-                data_path = os.path.join(data_dir, 'combined_test_images.npy')
-            else:
-                raise ValueError
-        else:
-            data_path = os.path.join(data_dir, '%s_data.npy' % (key))
+        # if is_val_format:
+        #     if key == 'train':
+        #         data_path = os.path.join(data_dir, 'combined_images.npy')
+        #     elif key == 'test':
+        #         data_path = os.path.join(data_dir, 'combined_test_images.npy')
+        #     else:
+        #         raise ValueError
+        # else:
+        #     data_path = os.path.join(data_dir, '%s_data.npy' % (key))
 
-        if encoding_dir is None:
-            encoding_path = None
-        else:
-            if vqvae_mode == 'zq':
-                encoding_path = os.path.join(encoding_dir,
-                                             '%s_encoding.npy' % (key))
-            elif vqvae_mode == 'zi':
-                encoding_path = os.path.join(encoding_dir,
-                                             '%s_zi.npy' % (key))
-            else:
-                raise ValueError
+        # if encoding_dir is None:
+        #     encoding_path = None
+        # else:
+        #     if vqvae_mode == 'zq':
+        #         encoding_path = os.path.join(encoding_dir,
+        #                                      '%s_encoding.npy' % (key))
+        #     elif vqvae_mode == 'zi':
+        #         encoding_path = os.path.join(encoding_dir,
+        #                                      '%s_zi.npy' % (key))
+        #     else:
+        #         raise ValueError
+
+        data_path = data_dir
+        encoding_path = None
 
         dataset = dataset_ctor(
             data_path,

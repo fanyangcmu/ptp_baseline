@@ -17,7 +17,6 @@ from rlkit.torch.networks import LinearTransform
 class IQLTrainer(TorchTrainer):
     def __init__(
             self,
-            env,
             policy,
             qf1,
             qf2,
@@ -56,7 +55,6 @@ class IQLTrainer(TorchTrainer):
             **kwargs
     ):
         super().__init__()
-        self.env = env
         self.policy = policy
         self.qf1 = qf1
         self.qf2 = qf2

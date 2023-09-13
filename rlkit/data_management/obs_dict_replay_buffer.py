@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from gym.spaces import Dict, Discrete
+from gym.spaces import Dict, Discrete, Box
 
 from rlkit.data_management.replay_buffer import ReplayBuffer
 import rlkit.data_management.images as image_np
@@ -22,7 +22,7 @@ class ObsDictReplayBuffer(ReplayBuffer):
     def __init__(
             self,
             max_size,
-            env,
+            # env,
             ob_keys_to_save=None,
             internal_keys=None,
             observation_key=None,  # for backwards compatibility
@@ -34,7 +34,6 @@ class ObsDictReplayBuffer(ReplayBuffer):
         """
 
         :param max_size:
-        :param env:
         :param ob_keys_to_save: List of keys to save
         """
         if observation_key is not None and observation_keys is not None:
@@ -53,16 +52,19 @@ class ObsDictReplayBuffer(ReplayBuffer):
         if internal_keys is None:
             internal_keys = []
         self.internal_keys = internal_keys
-        assert isinstance(env.observation_space, Dict)
+        # assert isinstance(env.observation_space, Dict)
         self.max_size = max_size
-        self.env = env
         self.observation_keys = observation_keys
         self.save_data_in_snapshot = save_data_in_snapshot
 
-        self._action_dim = env.action_space.low.size
+        self._action_dim = 3
+        # self._actions = np.ones(
+        #     (max_size, *env.action_space.shape),
+        #     dtype=np.float,
+        # )
         self._actions = np.ones(
-            (max_size, *env.action_space.shape),
-            dtype=env.action_space.dtype,
+            (max_size, *(3,)),
+            dtype=np.float,
         )
         # Make everything a 2D np array to make it easier for other code to
         # reason about the shape of the data
@@ -73,7 +75,8 @@ class ObsDictReplayBuffer(ReplayBuffer):
         # self._obs[key][i] is the value of observation[key] at time i
         self._obs = {}
         self._next_obs = {}
-        self.ob_spaces = self.env.observation_space.spaces
+        # self.ob_spaces = self.env.observation_space.spaces
+        self.ob_spaces = {'latent_observation': Box(-5, 5, [33],)}
         for key in observation_keys:
             if key not in ob_keys_to_save:
                 ob_keys_to_save.append(key)
@@ -99,8 +102,6 @@ class ObsDictReplayBuffer(ReplayBuffer):
         self._idx_to_future_obs_idx = np.ones((max_size, 2), dtype=np.int)
         self._idx_to_num_steps = np.ones((max_size, ), dtype=np.int)
 
-        if isinstance(self.env.action_space, Discrete):
-            raise NotImplementedError()
 
     def add_sample(self, observation, action, reward, terminal,
                    next_observation, **kwargs):

@@ -24,9 +24,9 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
     def __init__(
             self,
             trainer,
-            exploration_env,
-            evaluation_env,
-            exploration_data_collector: DataCollector,
+            # exploration_env,
+            # evaluation_env,
+            # exploration_data_collector: DataCollector,
             evaluation_data_collector: DataCollector,
             replay_buffer: ReplayBuffer,
             num_epochs,
@@ -43,9 +43,9 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             eval_replay_buffer=None,
     ):
         self.trainer = trainer
-        self.expl_env = exploration_env
-        self.eval_env = evaluation_env
-        self.expl_data_collector = exploration_data_collector
+        # self.expl_env = exploration_env
+        # self.eval_env = evaluation_env
+        # self.expl_data_collector = exploration_data_collector
         self.eval_data_collector = evaluation_data_collector
         self.replay_buffer = replay_buffer
         self.eval_replay_buffer = eval_replay_buffer
@@ -63,16 +63,16 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             exploration_get_diagnostic_functions = [
                 eval_util.get_generic_path_information,
             ]
-            if hasattr(self.expl_env, 'get_diagnostics'):
-                exploration_get_diagnostic_functions.append(
-                    self.expl_env.get_diagnostics)
+            # if hasattr(self.expl_env, 'get_diagnostics'):
+            #     exploration_get_diagnostic_functions.append(
+            #         self.expl_env.get_diagnostics)
         if evaluation_get_diagnostic_functions is None:
             evaluation_get_diagnostic_functions = [
                 eval_util.get_generic_path_information,
             ]
-            if hasattr(self.eval_env, 'get_diagnostics'):
-                evaluation_get_diagnostic_functions.append(
-                    self.eval_env.get_diagnostics)
+            # if hasattr(self.eval_env, 'get_diagnostics'):
+            #     evaluation_get_diagnostic_functions.append(
+            #         self.eval_env.get_diagnostics)
         self._eval_get_diag_fns = evaluation_get_diagnostic_functions
         self._expl_get_diag_fns = exploration_get_diagnostic_functions
 
@@ -110,8 +110,8 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         for post_train_func in self.post_train_funcs:
             post_train_func(self, self.epoch)
 
-        if self.expl_data_collector is not None:
-            self.expl_data_collector.end_epoch(self.epoch)
+        # if self.expl_data_collector is not None:
+        #     self.expl_data_collector.end_epoch(self.epoch)
 
         if self.eval_data_collector is not None:
             self.eval_data_collector.end_epoch(self.epoch)
@@ -149,9 +149,9 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         snapshot = {}
         for k, v in self.trainer.get_snapshot().items():
             snapshot['trainer/' + k] = v
-        if self.expl_data_collector is not None:
-            for k, v in self.expl_data_collector.get_snapshot().items():
-                snapshot['exploration/' + k] = v
+        # if self.expl_data_collector is not None:
+        #     for k, v in self.expl_data_collector.get_snapshot().items():
+        #         snapshot['exploration/' + k] = v
         if self.eval_data_collector is not None:
             for k, v in self.eval_data_collector.get_snapshot().items():
                 snapshot['evaluation/' + k] = v
@@ -185,19 +185,19 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         append_log(algo_log, self.trainer.get_diagnostics(), prefix='trainer/')
 
         # Exploration
-        if self.expl_data_collector is not None:
-            if self.epoch >= 0 or self.epoch % self._offline_expl_epoch_freq == 0:  
-                self._prev_expl_log = OrderedDict()
-                expl_diag = self.expl_data_collector.get_diagnostics()
-                self._prev_expl_log.update(expl_diag)
-                append_log(algo_log, expl_diag, prefix='expl/')
-                expl_paths = self.expl_data_collector.get_epoch_paths()
-                for fn in self._expl_get_diag_fns:
-                    addl_diag = fn(expl_paths)
-                    self._prev_expl_log.update(addl_diag)
-                    append_log(algo_log, addl_diag, prefix='expl/')
-            else:
-                append_log(algo_log, self._prev_expl_log, prefix='expl/')
+        # if self.expl_data_collector is not None:
+        #     if self.epoch >= 0 or self.epoch % self._offline_expl_epoch_freq == 0:  
+        #         self._prev_expl_log = OrderedDict()
+        #         expl_diag = self.expl_data_collector.get_diagnostics()
+        #         self._prev_expl_log.update(expl_diag)
+        #         append_log(algo_log, expl_diag, prefix='expl/')
+        #         expl_paths = self.expl_data_collector.get_epoch_paths()
+        #         for fn in self._expl_get_diag_fns:
+        #             addl_diag = fn(expl_paths)
+        #             self._prev_expl_log.update(addl_diag)
+        #             append_log(algo_log, addl_diag, prefix='expl/')
+        #     else:
+        #         append_log(algo_log, self._prev_expl_log, prefix='expl/')
 
         # Eval
         if self.eval_data_collector is not None:

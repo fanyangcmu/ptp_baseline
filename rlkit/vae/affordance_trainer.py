@@ -55,21 +55,21 @@ class AffordanceTrainer(LossFunction):
         self.num_plots = num_plots
         self.num_plot_epochs = num_plot_epochs
         self.num_goal_samples = num_goal_samples
-        vqvae.to(ptu.device)
+        # vqvae.to(ptu.device)
         affordance.to(ptu.device)
 
-        self.vqvae = vqvae
+        # self.vqvae = vqvae
         self.affordance = affordance
         self.classifier = classifier
 
         self.use_pretrained_vqvae = use_pretrained_vqvae
 
-        self.imsize = vqvae.imsize
-        self.representation_size = vqvae.representation_size
-        self.input_channels = vqvae.input_channels
-        self.imlength = vqvae.imlength
-        self.embedding_dim = vqvae.embedding_dim
-        self.root_len = vqvae.root_len
+        # self.imsize = vqvae.imsize
+        # self.representation_size = vqvae.representation_size
+        # self.input_channels = vqvae.input_channels
+        # self.imlength = vqvae.imlength
+        # self.embedding_dim = vqvae.embedding_dim
+        # self.root_len = vqvae.root_len
 
         # self.pred_loss_fn = F.smooth_l1_loss
         self.pred_loss_fn = torch.nn.SmoothL1Loss(
@@ -80,11 +80,11 @@ class AffordanceTrainer(LossFunction):
         self.lr = lr
         self.gradient_clip_value = gradient_clip_value
 
-        if not self.use_pretrained_vqvae:
-            self.vqvae_params = list(self.vqvae.parameters())
-            self.vqvae_optimizer = optim.Adam(self.vqvae_params,
-                                              lr=self.lr,
-                                              weight_decay=weight_decay)
+        # if not self.use_pretrained_vqvae:
+        #     self.vqvae_params = list(self.vqvae.parameters())
+        #     self.vqvae_optimizer = optim.Adam(self.vqvae_params,
+        #                                       lr=self.lr,
+        #                                       weight_decay=weight_decay)
 
         self.affordance_params = list(self.affordance.parameters())
         self.affordance_optimizer = optim.Adam(self.affordance_params,
@@ -103,7 +103,7 @@ class AffordanceTrainer(LossFunction):
 
         self.image_dist_thresh = image_dist_thresh
 
-        self.num_vqvae_warmup_epochs = num_vqvae_warmup_epochs
+        # self.num_vqvae_warmup_epochs = num_vqvae_warmup_epochs
 
         self.classifier_noise_level = classifier_noise_level
         self.train_classifier_interval = train_classifier_interval
@@ -191,6 +191,45 @@ class AffordanceTrainer(LossFunction):
         self.eval_statistics['test/epoch_duration'].append(
             time.time() - start_time)
 
+    def viz_epoch(self, epoch, dataloader, batches=10):
+        start_time = time.time()
+        prefix = 'viz'
+        for b in range(batches):
+            batch = next(iter(dataloader))
+            batch = self.batch_to_device(batch)
+            should_log = (b == 0)
+            s = batch['s']
+            h = batch['h']
+            aff_loss, aff_extra = self.compute_affordance_loss(
+                s, h, epoch, prefix, should_log)
+            h_pred = aff_extra['h_pred'].detach().cpu()
+            s0_gripper_pos = h[0][0][:3].detach().cpu()
+            s0_key_pts = h[0][0][3:].detach().cpu().reshape((-1, 3))
+            s1_gripper_pos = h[0][1][:3].detach().cpu()
+            s1_key_pts = h[0][1][3:].detach().cpu().reshape((-1, 3))
+
+            pred_gripper_pos = h_pred[0][1][:3].detach().cpu()
+            pred_key_pts = h_pred[0][1][3:].detach().cpu().reshape((-1, 3))
+            # import matplotlib.pyplot as plt
+            # from mpl_toolkits.mplot3d import Axes3D
+            # fig = plt.figure()
+            # ax = fig.add_subplot(projection='3d')
+            # ax.scatter(s0_gripper_pos[0], s0_gripper_pos[1], s0_gripper_pos[2], label='cur_gri', c='k')       
+            # ax.scatter(s0_key_pts[:, 0], s0_key_pts[:, 1], s0_key_pts[:, 2], label='cur_key', c='k')       
+            # ax.scatter(s1_gripper_pos[0], s1_gripper_pos[1], s1_gripper_pos[2], label='next_grip', c='g')       
+            # ax.scatter(s1_key_pts[:, 0], s1_key_pts[:, 1], s1_key_pts[:, 2], label='next_key', c='g')       
+            # ax.scatter(pred_gripper_pos[0], pred_gripper_pos[1], pred_gripper_pos[2], label='pred_grip', c='r')       
+            # ax.scatter(pred_key_pts[:, 0], pred_key_pts[:, 1], pred_key_pts[:, 2], label='pred_key', c='r')       
+            # plt.show()
+            # plt.legend()
+            # breakpoint()
+            # ax.clear()
+            # plt.clf()
+            # plt.cla()
+            if self.classifier is not None:
+                cls_loss, _ = self.compute_classifier_loss(
+                    h, h_pred, epoch, prefix, should_log)
+
     def train_batch(self, epoch, batch, should_log, should_train_classifier):
         self.timer.tic('train')
         prefix = 'train'
@@ -206,30 +245,33 @@ class AffordanceTrainer(LossFunction):
             s = s.reshape(-1, C, H, W)
             s = self.image_augment(s)
             s = s.reshape(s_shape)
+        
+        h = batch['h']
+        s_recon = None
 
-        if not self.use_pretrained_vqvae:
-            self.timer.tic('vqvae')
-            self.vqvae.train()
-            self.vqvae_optimizer.zero_grad()
-            vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
-                s, epoch, prefix, should_log)
-            h = vqvae_extra['h'].detach()
-            s_recon = vqvae_extra['s_recon'].detach()
-            vqvae_loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                self.vqvae_params, self.gradient_clip_value)
-            self.vqvae_optimizer.step()
-            self.timer.toc('vqvae')
-        elif 'h' not in batch or self.augment_image:
-            self.timer.tic('vqvae')
-            vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
-                s, epoch, prefix, should_log)
-            h = vqvae_extra['h'].detach()
-            s_recon = vqvae_extra['s_recon'].detach()
-            self.timer.toc('vqvae')
-        else:
-            h = batch['h']
-            s_recon = None
+        # if not self.use_pretrained_vqvae:
+        #     self.timer.tic('vqvae')
+        #     self.vqvae.train()
+        #     self.vqvae_optimizer.zero_grad()
+        #     vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
+        #         s, epoch, prefix, should_log)
+        #     h = vqvae_extra['h'].detach()
+        #     s_recon = vqvae_extra['s_recon'].detach()
+        #     vqvae_loss.backward()
+        #     torch.nn.utils.clip_grad_norm_(
+        #         self.vqvae_params, self.gradient_clip_value)
+        #     self.vqvae_optimizer.step()
+        #     self.timer.toc('vqvae')
+        # elif 'h' not in batch or self.augment_image:
+        #     self.timer.tic('vqvae')
+        #     vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
+        #         s, epoch, prefix, should_log)
+        #     h = vqvae_extra['h'].detach()
+        #     s_recon = vqvae_extra['s_recon'].detach()
+        #     self.timer.toc('vqvae')
+        # else:
+        #     h = batch['h']
+        #     s_recon = None
 
         self.timer.tic('affordance')
         self.affordance.train()
@@ -260,15 +302,15 @@ class AffordanceTrainer(LossFunction):
             self.cls_optimizer.step()
             self.timer.toc('cls')
 
-        if should_log and epoch % self.num_plot_epochs == 0:
-            plot_data = {
-                's': s,
-                'h': h,
-                'h_pred': h_pred,
-                's_recon': s_recon,
-            }
+        # if should_log and epoch % self.num_plot_epochs == 0:
+        #     plot_data = {
+        #         's': s,
+        #         'h': h,
+        #         'h_pred': h_pred,
+        #         's_recon': s_recon,
+        #     }
 
-            self._plot_images(plot_data, epoch, prefix)
+        #     self._plot_images(plot_data, epoch, prefix)
 
         self.timer.toc('train')
 
@@ -283,15 +325,18 @@ class AffordanceTrainer(LossFunction):
             s = s.reshape(-1, C, H, W)
             s = self.image_augment(s)
             s = s.reshape(s_shape)
+        
+        h = batch['h']
+        s_recon = None
 
-        if not self.use_pretrained_vqvae or 'h' not in batch or self.augment_image:
-            vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
-                s, epoch, prefix, should_log)
-            h = vqvae_extra['h'].detach()
-            s_recon = vqvae_extra['s_recon'].detach()
-        else:
-            h = batch['h']
-            s_recon = None
+        # if not self.use_pretrained_vqvae or 'h' not in batch or self.augment_image:
+        #     vqvae_loss, vqvae_extra = self._compute_vqvae_loss(
+        #         s, epoch, prefix, should_log)
+        #     h = vqvae_extra['h'].detach()
+        #     s_recon = vqvae_extra['s_recon'].detach()
+        # else:
+        #     h = batch['h']
+        #     s_recon = None
 
         aff_loss, aff_extra = self.compute_affordance_loss(
             s, h, epoch, prefix, should_log)
@@ -301,15 +346,15 @@ class AffordanceTrainer(LossFunction):
             cls_loss, _ = self.compute_classifier_loss(
                 h, h_pred, epoch, prefix, should_log)
 
-        if should_log and epoch % self.num_plot_epochs == 0:
-            plot_data = {
-                's': s,
-                'h': h,
-                'h_pred': h_pred,
-                's_recon': s_recon,
-            }
+        # if should_log and epoch % self.num_plot_epochs == 0:
+        #     plot_data = {
+        #         's': s,
+        #         'h': h,
+        #         'h_pred': h_pred,
+        #         's_recon': s_recon,
+        #     }
 
-            self._plot_images(plot_data, epoch, prefix)
+            # self._plot_images(plot_data, epoch, prefix)
 
         self.timer.toc('test')
 
@@ -327,25 +372,27 @@ class AffordanceTrainer(LossFunction):
         weights = (image_dists >= self.image_dist_thresh).to(torch.float32)
 
         if should_log:
-            self.tf_logger.log_histogram(
-                '%s/%s' % (prefix, 'image_dists'),
-                ptu.get_numpy(weights),
-                epoch)
-            self.tf_logger.log_histogram(
-                '%s/%s' % (prefix, 'weights'),
-                ptu.get_numpy(image_dists),
-                epoch)
-            self.tf_logger.log_value(
-                '%s/%s' % (prefix, 'weights_sum'),
-                weights.mean().item(),
-                epoch)
+            if self.tf_logger is not None:
+                self.tf_logger.log_histogram(
+                    '%s/%s' % (prefix, 'image_dists'),
+                    ptu.get_numpy(weights),
+                    epoch)
+                self.tf_logger.log_histogram(
+                    '%s/%s' % (prefix, 'weights'),
+                    ptu.get_numpy(image_dists),
+                    epoch)
+                self.tf_logger.log_value(
+                    '%s/%s' % (prefix, 'weights_sum'),
+                    weights.mean().item(),
+                    epoch)
 
         return weights
 
     def compute_affordance_loss(self, s, h, epoch, prefix, should_log):
 
-        assert h.shape[-1] == self.root_len
-        assert h.shape[-2] == self.root_len
+        # assert h.shape[-1] == self.root_len
+        # assert h.shape[-2] == self.root_len
+        s, h = s.float(), h.float()
 
         loss = 0.0
         loss_pred = 0.0
@@ -402,81 +449,82 @@ class AffordanceTrainer(LossFunction):
         }
 
         if should_log:
-            for key in ['kld', 'loss_pred', 'beta']:
-                self.tf_logger.log_value(
-                    '%s/affordance_all/%s' % (prefix, key),
-                    extra[key].item(),
-                    epoch)
+            if self.tf_logger is not None:
+                for key in ['kld', 'loss_pred', 'beta']:
+                    self.tf_logger.log_value(
+                        '%s/affordance_all/%s' % (prefix, key),
+                        extra[key].item(),
+                        epoch)
 
         return loss, extra
 
-    def _compute_vqvae_loss(self, s, epoch, prefix, should_log):
-        num_samples = s.shape[0]
-        num_steps = s.shape[1]
+    # def _compute_vqvae_loss(self, s, epoch, prefix, should_log):
+    #     num_samples = s.shape[0]
+    #     num_steps = s.shape[1]
 
-        loss = 0.0
-        loss_vq = 0.0
-        loss_recon = 0.0
+    #     loss = 0.0
+    #     loss_vq = 0.0
+    #     loss_recon = 0.0
 
-        h = []
-        s_recon = []
+    #     h = []
+    #     s_recon = []
 
-        for t in range(num_steps):
-            s_t = s[:, t]
-            vqvae_loss_t, vqvae_extra_t = self.vqvae.compute_loss(s_t)
-            loss += vqvae_loss_t
-            loss_vq += vqvae_extra_t['loss_vq']
-            loss_recon += vqvae_extra_t['loss_recon']
+    #     for t in range(num_steps):
+    #         s_t = s[:, t]
+    #         vqvae_loss_t, vqvae_extra_t = self.vqvae.compute_loss(s_t)
+    #         loss += vqvae_loss_t
+    #         loss_vq += vqvae_extra_t['loss_vq']
+    #         loss_recon += vqvae_extra_t['loss_recon']
 
-            h_t = vqvae_extra_t[self.prediction_mode]
-            h.append(h_t)
+    #         h_t = vqvae_extra_t[self.prediction_mode]
+    #         h.append(h_t)
 
-            s_recon_t = vqvae_extra_t['recon']
-            s_recon.append(s_recon_t)
+    #         s_recon_t = vqvae_extra_t['recon']
+    #         s_recon.append(s_recon_t)
 
-            # self.eval_statistics[
-            #     '%s/vqvae/t%d/%s' % (prefix, t, 'loss')].append(
-            #         vqvae_loss_t.item())
-            #
-            # for key in ['loss_vq', 'loss_recon']:
-            #     self.eval_statistics[
-            #         '%s/vqvae/t%d/%s' % (prefix, t, key)].append(
-            #             vqvae_extra_t[key].item())
+    #         # self.eval_statistics[
+    #         #     '%s/vqvae/t%d/%s' % (prefix, t, 'loss')].append(
+    #         #         vqvae_loss_t.item())
+    #         #
+    #         # for key in ['loss_vq', 'loss_recon']:
+    #         #     self.eval_statistics[
+    #         #         '%s/vqvae/t%d/%s' % (prefix, t, key)].append(
+    #         #             vqvae_extra_t[key].item())
 
-        s_recon = torch.stack(s_recon, 1)
-        h = torch.stack(h, 1)
-        h = h.view(
-            num_samples, num_steps,
-            self.embedding_dim, self.root_len, self.root_len)
+    #     s_recon = torch.stack(s_recon, 1)
+    #     h = torch.stack(h, 1)
+    #     h = h.view(
+    #         num_samples, num_steps,
+    #         self.embedding_dim, self.root_len, self.root_len)
 
-        extra = {
-            'h': h,
-            's_recon': s_recon,
-        }
+    #     extra = {
+    #         'h': h,
+    #         's_recon': s_recon,
+    #     }
 
-        if should_log:
-            self.tf_logger.log_value(
-                '%s/vqave/%s' % (prefix, 'loss'),
-                loss.item(),
-                epoch)
-            # self.tf_logger.log_value(
-            #     '%s/vqave/%s' % (prefix, 'loss_vq'),
-            #     loss.item(),
-            #     epoch)
-            # self.tf_logger.log_value(
-            #     '%s/vqave/%s' % (prefix, 'loss_recon'),
-            #     loss.item(),
-            #     epoch)
+    #     if should_log:
+    #         self.tf_logger.log_value(
+    #             '%s/vqave/%s' % (prefix, 'loss'),
+    #             loss.item(),
+    #             epoch)
+    #         # self.tf_logger.log_value(
+    #         #     '%s/vqave/%s' % (prefix, 'loss_vq'),
+    #         #     loss.item(),
+    #         #     epoch)
+    #         # self.tf_logger.log_value(
+    #         #     '%s/vqave/%s' % (prefix, 'loss_recon'),
+    #         #     loss.item(),
+    #         #     epoch)
 
-        return loss, extra
+    #     return loss, extra
 
     def _compute_affordance_loss(
             self, h0, h1, weights, epoch, prefix, should_log):
 
-        assert h0.shape[-1] == self.root_len
-        assert h0.shape[-2] == self.root_len
-        assert h1.shape[-1] == self.root_len
-        assert h1.shape[-2] == self.root_len
+        # assert h0.shape[-1] == self.root_len
+        # assert h0.shape[-2] == self.root_len
+        # assert h1.shape[-1] == self.root_len
+        # assert h1.shape[-2] == self.root_len
 
         loss = 0.0
 
@@ -484,8 +532,9 @@ class AffordanceTrainer(LossFunction):
         zqs_t1 = h1
 
         (z_mu, z_logvar), z, zes_pred = self.affordance(zqs_t1, cond=zqs_t0)
-        _, zqs_pred = self.vqvae.vector_quantizer(zes_pred)
-        h1_pred = zqs_pred.detach()
+        h1_pred = zes_pred.detach()
+        # _, zqs_pred = self.vqvae.vector_quantizer(zes_pred)
+        # h1_pred = zqs_pred.detach()
 
         batch_size = h0.shape[0]
         loss_pred = self.pred_loss_fn(
@@ -526,19 +575,19 @@ class AffordanceTrainer(LossFunction):
             loss.item())
 
         if should_log:
-            for key in ['kld', 'loss_pred']:
-                self.tf_logger.log_value(
-                    '%s/%s' % (prefix, key),
-                    extra[key].item(),
-                    epoch)
-            for key in [
-                    'h0', 'h1', 'h1_pred',
-                    'z_mu', 'z_logvar']:
-                self.tf_logger.log_histogram(
-                    '%s/%s' % (prefix, key),
-                    ptu.get_numpy(extra[key]),
-                    epoch)
-
+            if self.tf_logger is not None:
+                for key in ['kld', 'loss_pred']:
+                    self.tf_logger.log_value(
+                        '%s/%s' % (prefix, key),
+                        extra[key].item(),
+                        epoch)
+                for key in [
+                        'h0', 'h1', 'h1_pred',
+                        'z_mu', 'z_logvar']:
+                    self.tf_logger.log_histogram(
+                        '%s/%s' % (prefix, key),
+                        ptu.get_numpy(extra[key]),
+                        epoch)
         return loss, extra
 
     def compute_classifier_loss(self, h, h_pred, epoch, prefix, should_log):
@@ -567,10 +616,10 @@ class AffordanceTrainer(LossFunction):
             epoch,
             prefix,
             should_log):
-        assert h0.shape[-1] == self.root_len
-        assert h0.shape[-2] == self.root_len
-        assert h1.shape[-1] == self.root_len
-        assert h1.shape[-2] == self.root_len
+        # assert h0.shape[-1] == self.root_len
+        # assert h0.shape[-2] == self.root_len
+        # assert h1.shape[-1] == self.root_len
+        # assert h1.shape[-2] == self.root_len
 
         batch_size = h0.shape[0]
         num_steps = h0.shape[1]
@@ -597,6 +646,8 @@ class AffordanceTrainer(LossFunction):
             h0=_h0,
             h1=_h1,
         )
+
+        logits = self.classifier(h0=h0, h1=h1)
 
         targets = torch.cat(
             [
@@ -629,11 +680,12 @@ class AffordanceTrainer(LossFunction):
             loss.item())
 
         if should_log:
-            for key in ['acc']:
-                self.tf_logger.log_value(
-                    '%s/%s' % (prefix, key),
-                    extra[key].item(),
-                    epoch)
+            if self.tf_logger is not None:
+                for key in ['acc']:
+                    self.tf_logger.log_value(
+                        '%s/%s' % (prefix, key),
+                        extra[key].item(),
+                        epoch)
 
         return loss, extra
 
@@ -653,10 +705,11 @@ class AffordanceTrainer(LossFunction):
         image = torch.cat(s, dim=-2) + 0.5
         image = image.permute(0, 2, 3, 1).contiguous()
         image = ptu.get_numpy(image)
-        self.tf_logger.log_images(
-            '%s_original' % (prefix),
-            image[:self.num_plots],
-            epoch)
+        if self.tf_logger is not None:
+            self.tf_logger.log_images(
+                '%s_original' % (prefix),
+                image[:self.num_plots],
+                epoch)
 
         if not self.use_pretrained_vqvae:
             image = torch.cat(torch.unbind(s_recon, 1), dim=-2) + 0.5
@@ -682,10 +735,11 @@ class AffordanceTrainer(LossFunction):
         image = torch.cat(s_pred, dim=-2) + 0.5
         image = image.permute(0, 2, 3, 1).contiguous()
         image = ptu.get_numpy(image)
-        self.tf_logger.log_images(
-            '%s_pred' % (prefix),
-            image[:self.num_plots],
-            epoch)
+        if self.tf_logger is not None:
+            self.tf_logger.log_images(
+                '%s_pred' % (prefix),
+                image[:self.num_plots],
+                epoch)
 
         # Sample goals.
         s0 = plot_data['s'][:, 0]
@@ -723,10 +777,11 @@ class AffordanceTrainer(LossFunction):
             image = torch.cat(goal_pred, dim=-2) + 0.5
             image = image.permute(0, 2, 3, 1).contiguous()
             image = ptu.get_numpy(image)
-            self.tf_logger.log_images(
-                '%s_sampled_goals_%d' % (prefix, i),
-                image[:self.num_plots],
-                epoch)
+            if self.tf_logger is not None:
+                self.tf_logger.log_images(
+                    '%s_sampled_goals_%d' % (prefix, i),
+                    image[:self.num_plots],
+                    epoch)
 
     def _sample_goals(self, h0):
         assert h0.shape[-3] == self.embedding_dim
